@@ -27,7 +27,7 @@ fn fwrite(filename: &str, contents: String) -> Result<(), Box<dyn std::error::Er
   Ok(())
 }
 
-fn fread(filename: &str) -> Result<Vec<Regex>, Box<dyn std::error::Error>> {
+fn jread(filename: &str) -> Result<Vec<Regex>, Box<dyn std::error::Error>> {
   let file = std::fs::File::open(filename)?;
   let reader = std::io::BufReader::new(file);
   let u = serde_json::from_reader(reader)?;
@@ -68,9 +68,16 @@ fn display_match(modes : Vec<Mode>) {
 }
 
 fn get_hash() -> Result<String, Box<dyn std::error::Error>> {
-  return match std::env::args().nth(1) {
-    Some(hash) => Ok(hash),
-    None => Err("missing arg".into()),
+  let args : Vec<String> = std::env::args().collect();
+  if args.len() < 2 {
+    Err("missing argument (filepath or hash)")?
+  }
+
+  let arg : String = std::env::args().nth(1).unwrap();
+  if std::path::Path::new(&arg).exists() {
+    Ok(std::fs::read_to_string(&arg)?.trim_end().to_string())
+  } else {
+    Ok(arg)
   }
 }
 
@@ -82,7 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     cache(path)?;
   }
 
-  let regexps = fread(path)?;
+  let regexps = jread(path)?;
   for regex in regexps {
     let re = regress::Regex::new(&regex.regex);
     if re.is_err() {
